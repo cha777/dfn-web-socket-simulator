@@ -1,0 +1,21 @@
+{
+    "name": "dfn-web-socket-simulator",
+    "version": "1.0.0",
+    "description": "Simulating price qs server using provided response feed",
+    "main": "src/index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "start": "node src/index.js",
+        "prettier:check": "npx prettier --check .",
+        "prettier:write": "npx prettier --write ."
+    },
+    "author": "chathuranga_wm@yahoo.com",
+    "license": "UNLICENSED",
+    "dependencies": {
+        "fs-extra": "^9.1.0",
+        "websocket": "^1.0.33"
+    },
+    "devDependencies": {
+        "prettier": "2.7.1"
+    }
+}
