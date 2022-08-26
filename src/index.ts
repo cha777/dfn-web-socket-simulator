@@ -1,27 +1,30 @@
-const http = require('http');
-const path = require('path');
-const fs = require('fs-extra');
-const WebSocketServer = require('websocket').server;
+import http from 'http';
+import path from 'path';
+import fs from 'fs-extra';
+import { server as WebSocketServer } from 'websocket';
+import type { connection } from 'websocket';
+import type { SocketMessage } from './@types/SocketMessage';
+import type { ResponseData } from './@types/ResponseData';
 
-const socketQueue = [];
 const socketPort = 9898;
-let socketQueueTimer;
+const socketQueue: SocketMessage[] = [];
+let socketQueueTimer: NodeJS.Timeout | undefined;
 let isConnected = false;
 let counter = 0;
 
-function fetchResponse() {
+const fetchResponseData = () => {
     const responseFilePath = path.join(process.cwd(), 'assets', 'response.json');
     const responseData = fs.readFileSync(responseFilePath.toString(), 'utf8');
-    const response = JSON.parse(responseData);
+    const response = JSON.parse(responseData) as ResponseData;
 
     if (response.title) {
-        console.log(`processing response feed for ${response.title}`);
+        console.log(`Processing response feed for ${response.title}`);
     } else {
-        console.log('processing response feed');
+        console.log('Processing response feed');
     }
 
     if (!response.messages) {
-        throw new Error('response json file does not include messages');
+        throw new Error('Response json file does not include messages');
     }
 
     let timeOffset = 0;
@@ -45,34 +48,36 @@ function fetchResponse() {
         }
     });
 
-    console.log(`total feed duration: ${duration} ms`);
-}
+    console.log(`Total feed duration: ${duration} ms`);
+};
 
-function startMessageQueue(connection) {
+const startMessageQueue = (connection: connection) => {
     if (socketQueue.length > counter) {
         let record = socketQueue[counter++];
 
-        setTimeout(() => {
+        socketQueueTimer = setTimeout(() => {
             connection.sendUTF(record.message);
             startMessageQueue(connection);
         }, record.timeOut);
     } else {
         console.log('end');
     }
-}
+};
 
-function stopMessageQueue() {
+const stopMessageQueue = () => {
     if (socketQueueTimer) {
         clearInterval(socketQueueTimer);
         socketQueueTimer = undefined;
         counter = 0;
     }
-}
+};
 
-fetchResponse();
+fetchResponseData();
 
 const server = http.createServer();
-server.listen(socketPort);
+server.listen(socketPort, () => {
+    console.log(`Websocket started in ws://localhost:${socketPort}`);
+});
 
 const wsServer = new WebSocketServer({
     httpServer: server,
@@ -81,7 +86,7 @@ const wsServer = new WebSocketServer({
 wsServer.on('request', (request) => {
     const connection = request.accept(null, request.origin);
 
-    connection.on('message', (message) => {
+    connection.on('message', () => {
         if (isConnected) {
             stopMessageQueue();
         } else {
@@ -91,9 +96,7 @@ wsServer.on('request', (request) => {
         isConnected = true;
     });
 
-    connection.on('close', (code, desc) => {
-        stopMessageQueue();
-        isConnected = false;
-        console.log('Client has disconnected');
+    connection.on('close', () => {
+        console.warn('Client has disconnected');
     });
 });
