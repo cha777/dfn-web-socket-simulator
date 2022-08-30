@@ -2,7 +2,7 @@ import http from 'http';
 import path from 'path';
 import fs from 'fs-extra';
 import { server as WebSocketServer } from 'websocket';
-import type { connection } from 'websocket';
+import type { connection, IUtf8Message } from 'websocket';
 import type { SocketMessage } from './@types/SocketMessage';
 import type { ResponseData } from './@types/ResponseData';
 
@@ -10,6 +10,7 @@ const socketPort = 9898;
 const socketQueue: SocketMessage[] = [];
 let socketQueueTimer: NodeJS.Timeout | undefined;
 let isConnected = false;
+let isAuthenticated = false;
 let counter = 0;
 
 const fetchResponseData = () => {
@@ -48,11 +49,15 @@ const fetchResponseData = () => {
         }
     });
 
-    console.log(`Total feed duration: ${duration} ms`);
+    console.log(`Total feed duration: ${Math.floor(duration / 60000)} minutes`);
 };
 
 const startMessageQueue = (connection: connection) => {
     if (socketQueue.length > counter) {
+        if (counter === 0) {
+            console.log('Starting message queue');
+        }
+
         let record = socketQueue[counter++];
 
         socketQueueTimer = setTimeout(() => {
@@ -65,11 +70,21 @@ const startMessageQueue = (connection: connection) => {
 };
 
 const stopMessageQueue = () => {
+    console.log('Stopping message queue');
+
     if (socketQueueTimer) {
         clearInterval(socketQueueTimer);
         socketQueueTimer = undefined;
         counter = 0;
     }
+};
+
+const validateAuthentication = (wsMessage: string) => {
+    const messageStartIdx = wsMessage.indexOf('{');
+    const message = wsMessage.slice(messageStartIdx);
+    const messageContent = JSON.parse(message);
+
+    return messageContent.AUTHVER && !messageContent.SID;
 };
 
 fetchResponseData();
@@ -86,11 +101,19 @@ const wsServer = new WebSocketServer({
 wsServer.on('request', (request) => {
     const connection = request.accept(null, request.origin);
 
-    connection.on('message', () => {
-        if (isConnected) {
-            stopMessageQueue();
-        } else {
-            startMessageQueue(connection);
+    connection.on('message', (message) => {
+        let socketMsg = message as IUtf8Message;
+
+        if (!isAuthenticated) {
+            isAuthenticated = validateAuthentication(socketMsg.utf8Data);
+
+            if (isConnected) {
+                stopMessageQueue();
+            }
+
+            if (isAuthenticated) {
+                startMessageQueue(connection);
+            }
         }
 
         isConnected = true;

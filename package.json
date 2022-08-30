@@ -6,8 +6,8 @@
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "start": "ts-node src/index.ts",
-        "prettier:check": "npx prettier --check .",
-        "prettier:write": "npx prettier --write ."
+        "prettier:check": "npx prettier --config .prettierrc --check .",
+        "prettier:write": "npx prettier --config .prettierrc --write ."
     },
     "author": "chathuranga_wm@yahoo.com",
     "license": "UNLICENSED",
