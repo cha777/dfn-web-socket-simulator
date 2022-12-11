@@ -12,6 +12,8 @@
     "author": "chathuranga_wm@yahoo.com",
     "license": "UNLICENSED",
     "dependencies": {
+        "@types/clui": "^0.3.1",
+        "clui": "^0.3.6",
         "fs-extra": "^9.1.0",
         "websocket": "^1.0.33"
     },

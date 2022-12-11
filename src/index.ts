@@ -1,6 +1,7 @@
 import http from 'http';
 import path from 'path';
 import fs from 'fs-extra';
+import clui from 'clui';
 import { server as WebSocketServer } from 'websocket';
 import type { connection, IUtf8Message } from 'websocket';
 import type { SocketMessage } from './@types/SocketMessage';
@@ -8,6 +9,7 @@ import type { ResponseData } from './@types/ResponseData';
 
 const socketPort = 9898;
 const socketQueue: SocketMessage[] = [];
+let cluiProgress = new clui.Progress(20);
 let socketQueueTimer: NodeJS.Timeout | undefined;
 let isConnected = false;
 let isAuthenticated = false;
@@ -61,6 +63,12 @@ const startMessageQueue = (connection: connection) => {
         let record = socketQueue[counter++];
 
         socketQueueTimer = setTimeout(() => {
+            if (counter > 1) {
+                process.stdout.moveCursor(0, -1);
+            }
+
+            console.log(cluiProgress.update(counter, socketQueue.length));
+
             connection.sendUTF(record.message);
             startMessageQueue(connection);
         }, record.timeOut);
